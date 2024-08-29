@@ -49,6 +49,7 @@ INSTALL_REQUIRES = [
     "tenacity>=8.1.0, <10",
     "toml>=0.10.1, <2",
     "typing-extensions>=4.3.0, <5",
+    "py-redis==1.1.1",
     # Don't require watchdog on MacOS, since it'll fail without xcode tools.
     # Without watchdog, we fallback to a polling file watcher to check for app changes.
     "watchdog>=2.1.5, <5; platform_system != 'Darwin'",
