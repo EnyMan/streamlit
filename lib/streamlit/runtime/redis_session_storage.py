@@ -17,7 +17,7 @@ from __future__ import annotations
 import os
 import pickle
 
-from pyredis import RedisConnection
+from redis import Redis
 
 from streamlit.runtime.session_manager import SessionInfo, SessionStorage
 
@@ -30,19 +30,16 @@ class RedisSessionStorage(SessionStorage):
     ) -> None:
         """Instantiate a new RedisSessionStorage.
         """
-        redis_url = os.getenv("REDIS_URL")  # host:port/db
-        host, port_db = redis_url.replace("redis://", "").split(":")
-        port, db = port_db.split("/")
-        self._cache = RedisConnection(host=host, port=port, db=db)
+        self._cache = Redis.from_url(os.getenv("REDIS_URL"))
 
     def get(self, session_id: str) -> SessionInfo | None:
-        return pickle.loads(self._cache.get(session_id)["data"])
+        return pickle.loads(self._cache.get(session_id))
 
     def save(self, session_info: SessionInfo) -> None:
-        self._cache.set(session_info.session.id, {"data": pickle.dumps(session_info)})
+        self._cache.set(session_info.session.id, pickle.dumps(session_info))
 
     def delete(self, session_id: str) -> None:
-        self._cache.R.delete(session_id)
+        self._cache.delete(session_id)
 
     def list(self) -> list[SessionInfo]:
-        return [pickle.loads(value) for key, value in self._cache.get_keys("*")]
+        return [pickle.loads(value) for key, value in self._cache.hgetall("*")]
