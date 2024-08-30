@@ -16,11 +16,12 @@
 from __future__ import annotations
 
 import math
+import os
 from io import BytesIO
 from typing import Final
 
+import boto3
 from botocore.exceptions import ClientError
-
 
 from streamlit.logger import get_logger
 from streamlit.runtime.caching.storage.cache_storage_protocol import (
@@ -33,14 +34,13 @@ from streamlit.runtime.caching.storage.cache_storage_protocol import (
 from streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper import (
     InMemoryCacheStorageWrapper,
 )
-import boto3
 
 _LOGGER: Final = get_logger(__name__)
 
 # Streamlit directory where persisted @st.cache_data objects live.
 # (This is the same directory that @st.cache persisted objects live.
 # But @st.cache_data uses a different extension, so they don't overlap.)
-_CACHE_DIR_NAME: Final = "ci-streamlit-cache"
+_CACHE_BUCKET_NAME: Final = os.getenv("STREAMLIT_S3_BUCKET", "streamlit-cache")
 
 # The extension for our persisted @st.cache_data objects.
 # (`@st.cache_data` was originally called `@st.memo`)
@@ -57,7 +57,7 @@ class S3CacheStorageManager(CacheStorageManager):
 
     def clear_all(self) -> None:
         s3_resource = boto3.resource("s3")
-        s3_bucket = s3_resource.Bucket(_CACHE_DIR_NAME)
+        s3_bucket = s3_resource.Bucket(_CACHE_BUCKET_NAME)
         # s3_bucket.objects.delete() does this work?
         for key in s3_bucket.objects.all():
             key.delete()
@@ -104,7 +104,7 @@ class S3CacheStorage(CacheStorage):
         if self.persist == "disk":
             path = self._get_cache_file_path(key)
             try:
-                s3_object = self.s3_resource.Object(_CACHE_DIR_NAME, path)
+                s3_object = self.s3_resource.Object(_CACHE_BUCKET_NAME, path)
                 with BytesIO() as data:
                     s3_object.download_fileobj(data)
                     return bytes(data.read())
@@ -123,7 +123,7 @@ class S3CacheStorage(CacheStorage):
         if self.persist == "disk":
             path = self._get_cache_file_path(key)
             try:
-                s3_object = self.s3_resource.Object(_CACHE_DIR_NAME, path)
+                s3_object = self.s3_resource.Object(_CACHE_BUCKET_NAME, path)
                 with BytesIO(value) as data:
                     s3_object.upload_fileobj(data)
             except ClientError as e:
@@ -140,7 +140,7 @@ class S3CacheStorage(CacheStorage):
         if self.persist == "disk":
             path = self._get_cache_file_path(key)
             try:
-                s3_object = self.s3_resource.Object(_CACHE_DIR_NAME, path)
+                s3_object = self.s3_resource.Object(_CACHE_BUCKET_NAME, path)
                 s3_object.delete()
             except ClientError:
                 # The file is already removed.
@@ -152,8 +152,8 @@ class S3CacheStorage(CacheStorage):
 
     def clear(self) -> None:
         """Delete all keys for the current storage"""
-        cache_dir = _CACHE_DIR_NAME
-        s3_bucket = self.s3_resource.Bucket(cache_dir)
+        cache_bucket = _CACHE_BUCKET_NAME
+        s3_bucket = self.s3_resource.Bucket(cache_bucket)
         for key in s3_bucket.objects.all():
             if self._is_cache_file(key.key):
                 key.delete()
