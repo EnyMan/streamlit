@@ -30,8 +30,9 @@ class RedisSessionStorage(SessionStorage):
     ) -> None:
         """Instantiate a new RedisSessionStorage.
         """
-        redis_url = os.getenv("REDIS_URL")
-        host, port, db = redis_url.replace("redis://", "").split(":")  # not sure how the redis URL is formatted, but I assume something like this
+        redis_url = os.getenv("REDIS_URL")  # host:port/db
+        host, port_db = redis_url.replace("redis://", "").split(":")
+        port, db = port_db.split("/")
         self._cache = RedisConnection(host=host, port=port, db=db)
 
     def get(self, session_id: str) -> SessionInfo | None:
