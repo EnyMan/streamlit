@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import os
 import pickle
 
 from pyredis import RedisConnection
@@ -29,7 +30,9 @@ class RedisSessionStorage(SessionStorage):
     ) -> None:
         """Instantiate a new RedisSessionStorage.
         """
-        self._cache = RedisConnection()  # some args go here
+        redis_url = os.getenv("REDIS_URL")
+        host, port, db = redis_url.replace("redis://", "").split(":")  # not sure how the redis URL is formatted, but I assume something like this
+        self._cache = RedisConnection(host=host, port=port, db=db)
 
     def get(self, session_id: str) -> SessionInfo | None:
         return pickle.loads(self._cache.get(session_id)["data"])
