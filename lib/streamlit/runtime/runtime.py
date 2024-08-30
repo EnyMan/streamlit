@@ -21,6 +21,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Awaitable, Final, NamedTuple
 
+from runtime.caching.storage.s3_cache_storage import S3CacheStorageManager
+from runtime.redis_session_storage import RedisSessionStorage
 from streamlit import config
 from streamlit.components.lib.local_component_registry import LocalComponentRegistry
 from streamlit.logger import get_logger
@@ -93,7 +95,7 @@ class RuntimeConfig:
 
     # The cache storage backend for Streamlit's st.cache_data.
     cache_storage_manager: CacheStorageManager = field(
-        default_factory=LocalDiskCacheStorageManager
+        default_factory=S3CacheStorageManager
     )
 
     # The ComponentRegistry instance to use.
@@ -105,7 +107,7 @@ class RuntimeConfig:
     session_manager_class: type[SessionManager] = WebsocketSessionManager
 
     # The SessionStorage instance for the SessionManager to use.
-    session_storage: SessionStorage = field(default_factory=MemorySessionStorage)
+    session_storage: SessionStorage = field(default_factory=RedisSessionStorage)
 
     # True if the command used to start Streamlit was `streamlit hello`.
     is_hello: bool = False
